@@ -6,7 +6,8 @@ import { eq } from 'drizzle-orm'
 import { StorageService } from './storageService'
 import { ParseResult, ParseError } from './types'
 import { logger, logDocumentParsing, logValidationWarning } from '@/lib/logger'
-import * as pdfjsLib from 'pdfjs-dist'
+// 使用 legacy 构建：适配 Node/serverless 服务端环境（主入口为浏览器版，会触发 fake worker 加载失败）
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js'
 
 // 重新导出 ParseError 供 API 路由使用
 export { ParseError } from './types'
@@ -141,7 +142,10 @@ export async function parseDocument(
     // 6. 更新数据库(成功)
     await db.update(documents)
       .set({
-        status: 'READY',
+        // 解析完成进入 EMBEDDING 中间态（而非 READY）：
+        // 避免前端轮询在「解析完但未向量化」瞬间看到 READY 而提前停止刷新，导致文档块卡在 0。
+        // 最终的 READY 由 embeddingService 在向量化完成后统一设置。
+        status: 'EMBEDDING',
         contentLength: cleanContent.length,
         parsedAt: new Date(),
         metadata: {
