@@ -49,10 +49,10 @@ export async function chunkDocument(
       throw new ChunkingError('文档不存在')
     }
 
-    // 2. 检查文档状态(应该是READY from Story 2.3)
-    if (document.status !== 'READY') {
+    // 2. 检查文档状态:解析完成后为 EMBEDDING（新流程）或 READY（重新处理已就绪文档）
+    if (document.status !== 'READY' && document.status !== 'EMBEDDING') {
       throw new ChunkingError(
-        `文档状态错误: ${document.status}, 期望: READY`
+        `文档状态错误: ${document.status}, 期望: EMBEDDING 或 READY`
       )
     }
 
